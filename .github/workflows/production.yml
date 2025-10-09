@@ -40,8 +40,6 @@ jobs:
           context: .
           push: false
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/${{ env.IMAGE_NAME }}.tar
 
       - name: Compress Docker image
