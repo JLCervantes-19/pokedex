@@ -61,11 +61,17 @@ jobs:
             sleep 5
 
             # Verify container is running
-            if ! docker ps | grep -q pokedex-angular; then
-              echo "Container failed to start"
-              docker logs pokedex-angular
+            sleep 3
+            CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' pokedex-angular 2>/dev/null || echo "not found")
+
+            if [ "$CONTAINER_STATUS" != "running" ]; then
+              echo "❌ Container status: $CONTAINER_STATUS"
+              echo "Container logs:"
+              docker logs pokedex-angular 2>&1 || true
               exit 1
             fi
+
+            echo "✅ Container is running successfully"
 
             # Cleanup
             rm -f pokedex-angular.tar.gz
