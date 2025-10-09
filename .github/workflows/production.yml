@@ -50,11 +50,14 @@ jobs:
             docker stop pokedex-angular 2>/dev/null || true
             docker rm pokedex-angular 2>/dev/null || true
 
-            # Deploy new container
+            # Deploy new container with SSL support
             docker run -d \
               --name pokedex-angular \
               --restart unless-stopped \
-              -p 80:80 \
+              --expose 80 \
+              -e VIRTUAL_HOST=pokedex.hanscastellar.com \
+              -e LETSENCRYPT_HOST=pokedex.hanscastellar.com \
+              -e LETSENCRYPT_EMAIL=hans@ejemplo.com \
               pokedex-angular:${{ github.sha }}
 
             # Wait for container to start
