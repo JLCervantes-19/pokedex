@@ -16,17 +16,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Build Docker image
         run: docker build -t pokedex-angular:${{ github.sha }} -t pokedex-angular:latest .
 
       - name: Save and compress Docker image
         run: docker save pokedex-angular:${{ github.sha }} | gzip > /tmp/pokedex-angular.tar.gz
-
-      - name: Debug - Check secrets existence
-        run: |
-          if [ -z "${{ secrets.AZURE_HOST }}" ]; then echo "AZURE_HOST is empty"; else echo "AZURE_HOST exists"; fi
-          if [ -z "${{ secrets.AZURE_USER }}" ]; then echo "AZURE_USER is empty"; else echo "AZURE_USER exists"; fi
-          if [ -z "${{ secrets.AZURE_SSH_KEY }}" ]; then echo "AZURE_SSH_KEY is empty"; else echo "AZURE_SSH_KEY exists"; fi
 
       - name: Copy Docker image to Azure VM
         uses: appleboy/scp-action@v0.1.7
