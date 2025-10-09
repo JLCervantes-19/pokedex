@@ -21,15 +21,6 @@ jobs:
       - name: Save and compress Docker image
         run: docker save pokedex-angular:${{ github.sha }} | gzip > /tmp/pokedex-angular.tar.gz
 
-      - name: Debug secrets
-        run: |
-          echo "Host: ${{ secrets.AZURE_HOST }}"
-          echo "User: ${{ secrets.AZURE_USER }}"
-          echo "Key length: ${#AZURE_SSH_KEY}"
-          echo "Key first chars: ${AZURE_SSH_KEY:0:50}"
-        env:
-          AZURE_SSH_KEY: ${{ secrets.AZURE_SSH_KEY }}
-
       - name: Copy Docker image to Azure VM
         uses: appleboy/scp-action@v0.1.7
         with:
