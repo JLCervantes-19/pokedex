@@ -5,16 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to deploy'
-        required: false
-        default: 'main'
-
-env:
-  IMAGE_NAME: pokedex-angular
-  IMAGE_TAG: ${{ github.sha }}
-  CONTAINER_NAME: pokedex-angular
 
 jobs:
   build-and-deploy:
@@ -25,25 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 16
-        uses: actions/setup-node@v4
-        with:
-          node-version: '16'
-          cache: 'npm'
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest
-          outputs: type=docker,dest=/tmp/${{ env.IMAGE_NAME }}.tar
+        run: docker build -t pokedex-angular:${{ github.sha }} -t pokedex-angular:latest .
 
-      - name: Compress Docker image
-        run: gzip -f /tmp/${{ env.IMAGE_NAME }}.tar
+      - name: Save and compress Docker image
+        run: docker save pokedex-angular:${{ github.sha }} | gzip > /tmp/pokedex-angular.tar.gz
 
       - name: Copy Docker image to Azure VM
         uses: appleboy/scp-action@v0.1.7
@@ -51,7 +27,7 @@ jobs:
           host: ${{ secrets.AZURE_HOST }}
           username: ${{ secrets.AZURE_USER }}
           key: ${{ secrets.AZURE_SSH_KEY }}
-          source: '/tmp/${{ env.IMAGE_NAME }}.tar.gz'
+          source: '/tmp/pokedex-angular.tar.gz'
           target: '~/deployments/'
           strip_components: 1
           timeout: 10m
@@ -68,48 +44,35 @@ jobs:
             cd ~/deployments
 
             # Decompress and load image
-            gunzip -f ${{ env.IMAGE_NAME }}.tar.gz
-            docker load -i ${{ env.IMAGE_NAME }}.tar
+            gunzip -c pokedex-angular.tar.gz | docker load
 
-            # Graceful shutdown with health check
-            if docker ps -q -f name=${{ env.CONTAINER_NAME }}; then
-              echo "Stopping existing container..."
-              docker stop -t 30 ${{ env.CONTAINER_NAME }} || true
+            # Stop and remove old container
+            docker stop pokedex-angular 2>/dev/null || true
+            docker rm pokedex-angular 2>/dev/null || true
+
+            # Deploy new container
+            docker run -d \
+              --name pokedex-angular \
+              --restart unless-stopped \
+              -p 80:80 \
+              pokedex-angular:${{ github.sha }}
+
+            # Wait for container to start
+            sleep 5
+
+            # Verify container is running
+            if ! docker ps | grep -q pokedex-angular; then
+              echo "Container failed to start"
+              docker logs pokedex-angular
+              exit 1
             fi
 
-            # Remove old container and image
-            docker rm ${{ env.CONTAINER_NAME }} || true
-            docker image prune -f --filter "label=app=${{ env.CONTAINER_NAME }}" --filter "dangling=false"
-
-            # Deploy new container with health checks and resource limits
-            docker run -d \
-              --name ${{ env.CONTAINER_NAME }} \
-              --restart unless-stopped \
-              --memory="512m" \
-              --cpus="1.0" \
-              -p 80:80 \
-              --health-cmd="curl -f http://localhost:80 || exit 1" \
-              --health-interval=30s \
-              --health-timeout=10s \
-              --health-retries=3 \
-              --health-start-period=40s \
-              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-
-            # Wait for container to be healthy
-            echo "Waiting for container to be healthy..."
-            timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" ${{ env.CONTAINER_NAME }} | grep -q healthy; do sleep 2; done' || {
-              echo "Container failed to become healthy"
-              docker logs ${{ env.CONTAINER_NAME }}
-              exit 1
-            }
-
             # Cleanup
-            rm -f ${{ env.IMAGE_NAME }}.tar
-            docker system prune -f
+            rm -f pokedex-angular.tar.gz
+            docker image prune -f
 
             echo "Deployment successful!"
 
-      - name: Verify deployment
-        if: success()
-        run: |
-          curl -f -s -o /dev/null -w "%{http_code}" http://${{ secrets.AZURE_HOST }} || echo "Warning: Health check failed"
+      - name: Cleanup local artifacts
+        if: always()
+        run: rm -f /tmp/pokedex-angular.tar.gz
