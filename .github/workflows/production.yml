@@ -54,7 +54,7 @@ jobs:
             docker run -d \
               --name pokedex-angular \
               --restart unless-stopped \
-              -p 80:80 \
+              -p 8080:80 \
               pokedex-angular:${{ github.sha }}
 
             # Wait for container to start
