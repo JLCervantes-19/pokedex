@@ -1,5 +1,6 @@
 @import 'base/typography';
 @import 'utils/media-query';
+@import 'utils/colors';
 
 .about {
   display: flex;
@@ -22,6 +23,60 @@
     margin: 0;
     padding-bottom: 2em;
     font-family: $roboto;
+  }
+
+  &__developers {
+    width: 100%;
+    margin: 2em 0;
+    padding: 1.5em;
+    background-color: rgba($shark, 0.05);
+    border-radius: 8px;
+
+    h2 {
+      text-align: center;
+      margin: 0 0 1.5em 0;
+      font-family: $roboto;
+      font-size: 1.5em;
+      color: $shark;
+    }
+
+    .developers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1em;
+
+      @include respond-to(xs) {
+        grid-template-columns: 1fr;
+      }
+
+      .developer-card {
+        background-color: white;
+        padding: 1.2em;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        h3 {
+          margin: 0 0 0.5em 0;
+          font-family: $roboto;
+          font-size: 1.1em;
+          color: $shark;
+        }
+
+        p {
+          margin: 0;
+          font-family: $roboto;
+          font-size: 0.9em;
+          color: rgba($shark, 0.7);
+        }
+      }
+    }
   }
 
   &__professor-img {
