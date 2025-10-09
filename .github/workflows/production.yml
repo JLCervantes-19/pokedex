@@ -16,16 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Build Docker image
         run: docker build -t pokedex-angular:${{ github.sha }} -t pokedex-angular:latest .
 
       - name: Save and compress Docker image
-        run: docker save pokedex-angular:${{ github.sha }} | gzip > /tmp/pokedex-angular.tar.gz
+        run: docker save pokedex-angular:${{ github.sha }} | gzip > pokedex-angular.tar.gz
 
       - name: Copy Docker image to Azure VM
         uses: appleboy/scp-action@v0.1.7
@@ -33,9 +28,8 @@ jobs:
           host: ${{ secrets.AZURE_HOST }}
           username: ${{ secrets.AZURE_USER }}
           key: ${{ secrets.AZURE_SSH_KEY }}
-          source: '/tmp/pokedex-angular.tar.gz'
-          target: '~/deployments/'
-          strip_components: 1
+          source: 'pokedex-angular.tar.gz'
+          target: 'deployments'
           timeout: 10m
 
       - name: Deploy on Azure VM
@@ -81,4 +75,4 @@ jobs:
 
       - name: Cleanup local artifacts
         if: always()
-        run: rm -f /tmp/pokedex-angular.tar.gz
+        run: rm -f pokedex-angular.tar.gz
